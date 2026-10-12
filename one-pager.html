@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Квартирник — one-pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    @page { size: 210mm 478mm; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #f4f1ea;
+      color: #1c2b2a;
+      font-family: Manrope, Inter, sans-serif;
+    }
+    .page {
+      width: 210mm;
+      height: 478mm;
+      margin: 0 auto;
+      background: #f4f1ea;
+      padding: 12mm 12mm 18mm;
+      display: flex;
+      flex-direction: column;
+      gap: 3.4mm;
+      overflow: hidden;
+    }
+    h1, h2, p { margin: 0; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding-bottom: 1.4mm;
+      border-bottom: 1px solid #c9d2cc;
+    }
+    .brand {
+      font-size: 22pt;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .brand-sub {
+      font-size: 10.5pt;
+      font-weight: 500;
+      color: #3e514e;
+    }
+    h1 {
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.12;
+      max-width: 22em;
+    }
+    .lead {
+      margin-top: 1mm;
+      font-size: 11.5pt;
+      font-weight: 500;
+      line-height: 1.28;
+      max-width: 42em;
+    }
+    h2 {
+      font-size: 13pt;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4mm;
+    }
+    .body, .col p, .card p, .hint p, .success p, .integ p {
+      font-size: 10.5pt;
+      line-height: 1.35;
+      font-weight: 500;
+    }
+    .problem .body + .body { margin-top: 1.4mm; }
+    .uvp { margin-top: 0.7mm; font-weight: 700; }
+    .stitch {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 4mm;
+      font-size: 10pt;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fffcf8;
+      font-size: 9pt;
+      line-height: 1.28;
+      font-weight: 500;
+    }
+    th, td {
+      border: 1px solid #c9d2cc;
+      padding: 1.3mm 1.8mm;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { font-weight: 700; }
+    td.yesno, th.yesno { text-align: center; }
+    td.own, th.own { font-weight: 700; }
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2.4mm;
+    }
+    .card, .hint {
+      background: #fffcf8;
+      border: 1px solid #c9d2cc;
+      border-radius: 4px;
+      padding: 2.2mm 2.6mm 2.4mm;
+    }
+    .card strong, .hint strong {
+      display: block;
+      font-size: 10.5pt;
+      font-weight: 700;
+      margin-bottom: 0.35mm;
+    }
+    .card p, .hint p { font-weight: 500; }
+    .cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5mm;
+    }
+    .col p + p { margin-top: 0.45mm; }
+    .success p + p { margin-top: 0.2mm; }
+    .note {
+      margin-bottom: 0.6mm;
+      font-size: 9.5pt;
+      font-weight: 600;
+    }
+    .integ { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5mm; }
+    .integ strong { display: block; font-size: 10.5pt; margin-bottom: 0.5mm; }
+    .footer {
+      margin-top: auto;
+      padding-top: 1.4mm;
+      border-top: 1px solid #c9d2cc;
+    }
+    .team {
+      font-size: 10pt;
+      font-weight: 600;
+      margin-bottom: 0.7mm;
+    }
+    .sources {
+      font-size: 8pt;
+      line-height: 1.25;
+      font-weight: 500;
+      color: #3e514e;
+    }
+    .sources p + p { margin-top: 0.5mm; }
+    a { color: inherit; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <article class="page">
+    <header class="header">
+      <div class="brand">КВАРТИРНИК</div>
+      <div class="brand-sub">Цифровой паспорт квартиры</div>
+    </header>
+
+    <section>
+      <h1>Всё важное для квартиры —<br />в одном месте</h1>
+      <p class="lead">Документы, техника, гарантии, платежи и показания — у арендодателя и арендатора в одном сервисе.</p>
+    </section>
+
+    <section>
+      <h2>Проблема</h2>
+      <div class="problem">
+        <p class="body">Сценарий. Арендодатель сдал квартиру. Договор остался в переписке на Авито, чек на технику — у собственника, дату поверки и показания помнит только арендатор.</p>
+        <p class="body">Частота. Платёж и показания — каждый месяц. Гарантия на технику обычно 1–2 года. Поверка — по паспорту счётчика.</p>
+        <p class="body">Почему сейчас. На 1 апреля 2026 года в аренду предлагали 128 тыс. объектов: новых пар «арендодатель — арендатор» больше, а документы сдачи остаются в чатах объявлений и мессенджеров.</p>
+        <p class="body">Масштаб. По опросу ВЦИОМ 9–11 мая 2026 года жильё за плату снимают 8% россиян. Среди 18–24 лет в арендованном жилье живут 30%.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Решение</h2>
+      <p class="body">Квартирник — мобильный паспорт квартиры для двоих. Арендодатель и арендатор видят технику, документы, сроки, показания и платежи.</p>
+      <p class="body uvp">UVP. Квартирник ведёт квартиру после заселения. Яндекс Аренда и Авито находят жильца, приложение УК ведёт дом, а не сдачу.</p>
+    </section>
+
+    <section>
+      <h2>Сшивка</h2>
+      <div class="stitch">
+        <div>Пропущенные сроки → календарь и пуши</div>
+        <div>Потерянные чеки → архив документов и гарантий</div>
+        <div>Забытые показания → счётчики в паспорте и задача на передачу</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Чем отличается</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Критерий</th>
+            <th>Яндекс Аренда</th>
+            <th>Приложение УК</th>
+            <th>Авито</th>
+            <th class="own">Квартирник</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Поиск жильца и объявление</td>
+            <td>Да</td>
+            <td>Нет</td>
+            <td>Да</td>
+            <td class="own">Нет</td>
+          </tr>
+          <tr>
+            <td>Договор, показания и платежи после заселения</td>
+            <td>Платежи по сделке</td>
+            <td>Показания и заявки по дому</td>
+            <td>Чат</td>
+            <td class="own">Паспорт квартиры</td>
+          </tr>
+          <tr>
+            <td>Техника, чеки, гарантии</td>
+            <td>Нет</td>
+            <td>Нет</td>
+            <td>Нет</td>
+            <td class="own">Да</td>
+          </tr>
+          <tr>
+            <td>Общий доступ арендодателя и арендатора</td>
+            <td>Кабинет сделки</td>
+            <td>Житель дома</td>
+            <td>Переписка</td>
+            <td class="own">Роли в квартире</td>
+          </tr>
+          <tr>
+            <td>1–5 квартир одного арендодателя</td>
+            <td>Объекты сдачи</td>
+            <td>Нет</td>
+            <td>Несколько объявлений</td>
+            <td class="own">Режим арендодателя</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Что внутри</h2>
+      <div class="cards">
+        <article class="card">
+          <strong>01 — Паспорт квартиры</strong>
+          <p>Комнаты, техника и счётчики. Закрывает забытые показания.</p>
+        </article>
+        <article class="card">
+          <strong>02 — Календарь задач</strong>
+          <p>Платежи, показания и обслуживание. Закрывает пропущенные сроки.</p>
+        </article>
+        <article class="card">
+          <strong>03 — Документы и гарантии</strong>
+          <p>Чеки, договоры, инструкции и сроки. Закрывает потерянные чеки.</p>
+        </article>
+        <article class="card">
+          <strong>04 — Совместный доступ</strong>
+          <p>Арендодатель и арендатор видят одну квартиру: задачи, документы и историю.</p>
+        </article>
+        <article class="card">
+          <strong>05 — История обслуживания</strong>
+          <p>Ремонты, замены и платежи остаются у квартиры.</p>
+        </article>
+        <article class="card">
+          <strong>06 — Режим арендодателя</strong>
+          <p>Квартиры, арендаторы, платежи и показания. Входит в первую версию.</p>
+        </article>
+      </div>
+      <article class="hint" style="margin-top: 1.6mm;">
+        <strong>Сторис</strong>
+        <p>Короткие карточки: что входит в ЖКХ, режимы счётчика электричества, страховка, регистрация в квартире.</p>
+      </article>
+    </section>
+
+    <section class="cols">
+      <div class="col">
+        <h2>Для кого</h2>
+        <p>Арендодатель с 1–5 квартирами</p>
+        <p>Арендатор этой квартиры</p>
+        <p>Владелец первой квартиры</p>
+      </div>
+      <div class="col">
+        <h2>Монетизация</h2>
+        <p>Free — одна квартира и базовые задачи</p>
+        <p>Premium — 99–199 ₽/месяц</p>
+        <p>Совместный доступ, до 5 квартир, архив и история обслуживания.</p>
+        <p>Платит арендодатель или владелец. Арендатор бесплатно.</p>
+      </div>
+      <div class="col">
+        <h2>MVP</h2>
+        <p>Мобильное приложение для арендодателя и арендатора.</p>
+        <p>В версии: квартира и техника, документы и гарантии, календарь и пуши, совместный доступ, режим арендодателя, сторис.</p>
+        <p>Стек: мобильное приложение, backend, Postgres, файлы в S3, пуши.</p>
+      </div>
+    </section>
+
+    <section class="success">
+      <h2>Успех</h2>
+      <p>100 живых квартир.</p>
+      <p>Живая квартира: в ней есть арендодатель и арендатор, и за последние 30 дней сданы показания или отмечен платёж.</p>
+    </section>
+
+    <section>
+      <h2>Потенциальные интеграции</h2>
+      <p class="note">Не входят в первую версию</p>
+      <div class="integ">
+        <div>
+          <strong>Госуслуги Дом</strong>
+          <p>Показания, ЖКУ и события дома.</p>
+        </div>
+        <div>
+          <strong>Управляющие компании</strong>
+          <p>Заявки, уведомления и работы в доме.</p>
+        </div>
+        <div>
+          <strong>Сервисы дома</strong>
+          <p>Мастера, страхование, календарь и напоминания.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p class="team">Команда / Наседкин Дмитрий — разработчик продукта</p>
+      <div class="sources">
+        <p>1. ВЦИОМ, «Жильё мечты по-русски», опрос 9–11 мая 2026 года, 1600 человек: жильё за плату снимают 8% (7% у частных лиц и 1% у юрлиц); в возрасте 18–24 лет — 30%. https://wciom.ru/analytical-reviews/analiticheskii-obzor/zhile-mechty-po-russki</p>
+        <p>2. Дом.РФ, на 1 апреля 2026 года в аренду предлагали 128 тыс. объектов. Новость ЦИАН: https://www.cian.ru/novosti-predlozhenie-arendy-stalo-maksimalnym-za-6-let-344057/</p>
+      </div>
+    </footer>
+  </article>
+</body>
+</html>
