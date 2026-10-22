@@ -16,6 +16,10 @@
 open one_pager/one-pager.html
 ```
 
+## Презентация
+
+Статус сделанного — в [`docs/kt1.pptx`](docs/kt1.pptx): C4, роли микросервисов, выбор River и план работ.
+
 ## Backend
 
 Черновик Go-бэкенда — в [`backend/`](backend/README.md). Сейчас сервисы отвечают только на `GET /ping`. Домены и границы описаны в [`docs/c4.md`](docs/c4.md).
