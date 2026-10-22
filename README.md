@@ -15,3 +15,7 @@
 ```bash
 open one_pager/one-pager.html
 ```
+
+## Backend
+
+Черновик Go-бэкенда — в [`backend/`](backend/README.md). Сейчас сервисы отвечают только на `GET /ping`. Домены и границы описаны в [`docs/c4.md`](docs/c4.md).

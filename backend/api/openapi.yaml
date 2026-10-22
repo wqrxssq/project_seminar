@@ -1,0 +1,1722 @@
+openapi: 3.0.3
+info:
+  title: Kvartirnik HTTP API
+  version: 0.1.0-draft
+  x-status: draft
+  description: |
+    Draft contract for the external HTTP API. Clients are the iOS and Android
+    apps. They talk only to api-gateway. Domain services speak gRPC behind
+    that gateway; those calls are not described here.
+
+    Status of this repository: GET /ping is the only implemented route.
+    Every other path below is a contract sketch. Field lists name what the
+    SRS and the domain note already require. They are not a finished schema.
+
+    Product sources: ../docs/c4.md, ../docs/PRD.md, ../docs/SRS.md.
+
+    Access JWT lifetime in the architecture draft is 15 minutes. The gateway
+    checks the signature itself. Apartment rules stay in the domains.
+    Unsafe retries send Idempotency-Key. The same key and the same body are
+    safe to repeat. A payment is a mark for a calendar month. The system does
+    not move money. Premium is a store receipt.
+
+servers:
+  - url: http://localhost:8080
+    description: Local api-gateway. Only GET /ping is served.
+
+tags:
+  - name: operational
+    description: Implemented on the draft processes.
+  - name: auth
+    description: identity. Phone and a one-time code.
+  - name: passport
+    description: passport. Apartment, rooms, appliances.
+  - name: metering
+    description: metering. Meters and the current reading of a month.
+  - name: calendar
+    description: calendar. Reading, payment, and maintenance tasks.
+  - name: payments
+    description: payments. Month marker and an optional receipt file.
+  - name: documents
+    description: documents. Archive, visibility, optional end date.
+  - name: membership
+    description: membership. Sides, invites, owner, closing the tenant side.
+  - name: landlord
+    description: Gateway screen assembled from membership, metering, and payments.
+  - name: history
+    description: history. Premium feed. The domain does not rewrite source facts.
+  - name: billing
+    description: billing. Base and Premium entitlement, store receipt.
+  - name: notification
+    description: notification. Per-type push switches.
+  - name: content
+    description: content. Four fixed stories. Callers do not edit the text.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /ping:
+    get:
+      tags: [operational]
+      operationId: ping
+      summary: Process is up
+      x-implemented: true
+      security: []
+      responses:
+        "200":
+          description: The draft process is serving.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, status]
+                properties:
+                  service:
+                    type: string
+                    example: api-gateway
+                  status:
+                    type: string
+                    example: ok
+
+  /v1/auth/codes:
+    post:
+      tags: [auth]
+      operationId: requestSignInCode
+      summary: Send a one-time sign-in code
+      security: []
+      description: |
+        Not implemented. The draft channel is a phone number. The SMS provider
+        is outside this API. The SRS does not fix the registration channel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  example: "+79991234567"
+      responses:
+        "202":
+          description: Not implemented. Code dispatch accepted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/auth/sessions:
+    post:
+      tags: [auth]
+      operationId: createSession
+      summary: Exchange a code for tokens
+      security: []
+      description: Not implemented. Access token lifetime is 15 minutes.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone:
+                  type: string
+                code:
+                  type: string
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/auth/sessions/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshSession
+      summary: Refresh an access token
+      security: []
+      description: Not implemented.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/auth/sessions/current:
+    delete:
+      tags: [auth]
+      operationId: deleteCurrentSession
+      summary: End the current session
+      description: Not implemented.
+      responses:
+        "204":
+          description: Not implemented.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/me/devices:
+    put:
+      tags: [auth]
+      operationId: putDevice
+      summary: Register a push token
+      description: |
+        Not implemented. identity stores the device token. notification reads
+        tokens at send time. Delivery itself is APNs or FCM, outside this API.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform, push_token]
+              properties:
+                platform:
+                  type: string
+                  enum: [ios, android]
+                push_token:
+                  type: string
+      responses:
+        "204":
+          description: Not implemented.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/apartments:
+    get:
+      tags: [passport, membership]
+      operationId: listApartments
+      summary: List apartments the caller belongs to
+      description: |
+        Not implemented. Every role, including a tenant-only apartment.
+        The landlord month screen is GET /v1/landlord/apartments.
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [apartments]
+                properties:
+                  apartments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Apartment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [passport]
+      operationId: createApartment
+      summary: Create an apartment
+      description: |
+        Not implemented. FR-1, FR-3, FR-18. The caller becomes the only owner
+        of their side. resident starts a live-in apartment with no tenant side.
+        Base keeps one apartment. Premium keeps at most five. Past the limit
+        the apartment is not stored. On the base plan the client is shown
+        Premium purchase. On Premium the client is shown the limit of five.
+        passport asks billing for the limit and membership to claim the owner
+        before the apartment becomes active.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApartmentRequest"
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Apartment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}:
+    get:
+      tags: [passport]
+      operationId: getApartment
+      summary: Open one apartment passport
+      description: |
+        Not implemented. Rooms and appliances live in passport. The member
+        list is assembled from membership. passport does not store the owner.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Apartment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/apartments/{apartmentId}/rooms:
+    post:
+      tags: [passport]
+      operationId: createRoom
+      summary: Add a room
+      description: Not implemented. Either side may add a room.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: Кухня
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/rooms/{roomId}:
+    patch:
+      tags: [passport]
+      operationId: updateRoom
+      summary: Rename a room
+      description: Not implemented.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/apartments/{apartmentId}/appliances:
+    post:
+      tags: [passport]
+      operationId: createAppliance
+      summary: Add an appliance
+      description: |
+        Not implemented. room_id empty means the appliance sits on the
+        apartment, not in a room. A later replacement is the passport fact
+        appliance.replaced.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplianceWrite"
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appliance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/appliances/{applianceId}:
+    patch:
+      tags: [passport]
+      operationId: updateAppliance
+      summary: Edit an appliance
+      description: Not implemented. Either side may edit.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/ApplianceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplianceWrite"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appliance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/apartments/{apartmentId}/meters:
+    get:
+      tags: [metering]
+      operationId: listMeters
+      summary: List meters
+      description: Not implemented.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [meters]
+                properties:
+                  meters:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Meter"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [metering]
+      operationId: createMeter
+      summary: Add a meter
+      description: |
+        Not implemented. Kinds are electricity, cold water, hot water, gas,
+        or custom with a caller-supplied name. Registering a meter is the
+        fact meter.registered, which opens the current month's reading task.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMeterRequest"
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Meter"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/meters/{meterId}/readings:
+    get:
+      tags: [metering]
+      operationId: listReadings
+      summary: List readings of one meter
+      description: Not implemented. One current reading per calendar month.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/MeterId"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [readings]
+                properties:
+                  readings:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Reading"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/meters/{meterId}/readings/{month}:
+    get:
+      tags: [metering]
+      operationId: getReading
+      summary: Read the current value for a month
+      description: Not implemented.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/MeterId"
+        - $ref: "#/components/parameters/Month"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reading"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [metering]
+      operationId: putReading
+      summary: Submit the reading for a month
+      description: |
+        Not implemented. FR-10. Value, date, and an optional JPEG or PNG up
+        to 20 MB. PDF is rejected. A new submit for the same month replaces
+        the current row. The previous row stays if the file is rejected.
+
+        While a tenant side exists, that side submits. With no tenant, the
+        resident side submits.
+
+        With a photo, the response carries a presigned PUT to object storage.
+        The phone writes the bytes there. The reading stays uncommitted until
+        media emits object.committed. A dropped upload is not a saved reading.
+        Without a photo, the row and the outbox fact reading.committed commit
+        in one metering transaction.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/MeterId"
+        - $ref: "#/components/parameters/Month"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutReadingRequest"
+      responses:
+        "200":
+          description: Not implemented. Committed, or waiting for the photo bytes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadingWriteResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/tasks:
+    get:
+      tags: [calendar]
+      operationId: listTasks
+      summary: List calendar tasks
+      description: |
+        Not implemented. A reading task stays open until that meter has a
+        current reading for the month. A payment task stays open until the
+        month is closed. Other meters are left alone. The task can still be
+        visible while reading.committed is in flight. A later month sweep
+        closes it.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - name: month
+          in: query
+          required: false
+          description: Calendar month. The product day is the device calendar date.
+          schema:
+            $ref: "#/components/schemas/Month"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tasks]
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [calendar]
+      operationId: createMaintenanceTask
+      summary: Add a maintenance task
+      description: |
+        Not implemented. Caller supplies a title and a due date. The task is
+        visible to both sides when a second side exists. Completing it is the
+        fact maintenance.completed.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, due_on]
+              properties:
+                title:
+                  type: string
+                due_on:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/payments/{month}:
+    get:
+      tags: [payments]
+      operationId: getPayment
+      summary: Read one month's payment marker
+      description: |
+        Not implemented. This is a mark, not a transfer. With two sides the
+        month closes only when the landlord confirms, with or without a receipt.
+        With one side, that side closes the month itself.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/Month"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/payments/{month}/receipt:
+    post:
+      tags: [payments]
+      operationId: attachPaymentReceipt
+      summary: Attach a receipt to a month
+      description: |
+        Not implemented. JPEG, PNG, or PDF, up to 20 MB. Attaching a receipt
+        does not close a two-sided month. The file is a presigned PUT. The
+        receipt becomes visible after object.committed.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/Month"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileIntent"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileWriteResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/payments/{month}/submission:
+    post:
+      tags: [payments]
+      operationId: submitPayment
+      summary: Close the month when the apartment has one side
+      description: |
+        Not implemented. Used when the apartment has a single side. That side
+        records the month, with or without a receipt, and the payment task closes.
+        Refused while two sides exist. Those months close through confirmation.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/Month"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/payments/{month}/confirmation:
+    post:
+      tags: [payments]
+      operationId: confirmPayment
+      summary: Landlord confirms a two-sided month
+      description: |
+        Not implemented. Only the landlord side confirms, including with no
+        receipt. A tenant is refused while a landlord side exists. Confirmation
+        is the payment.settled fact. It closes the payment task and history
+        appends the month. A single-sided month uses submission.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/Month"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/documents:
+    get:
+      tags: [documents]
+      operationId: listDocuments
+      summary: List documents the caller may see
+      description: |
+        Not implemented. own_side is absent from the other side, including by
+        a direct file link. both_sides is visible to both current sides.
+        After the tenant side is closed, an old both_sides document stays
+        visible to the landlord and stays hidden from the next tenant. An old
+        own_side document of the departed generation is visible to nobody.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [documents]
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Document"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [documents]
+      operationId: createDocument
+      summary: Add a document
+      description: |
+        Not implemented. JPEG, PNG, or PDF, up to 20 MB, plus a title and a
+        type. Visibility defaults to both_sides. expires_on is optional. When
+        it is set, calendar is expected to remind 14 days earlier
+        (document.dated). The bytes go to object storage with the presigned PUT.
+        The document stays hidden until object.committed.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentRequest"
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentWriteResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/documents/{documentId}:
+    delete:
+      tags: [documents]
+      operationId: deleteDocument
+      summary: Delete a document
+      description: |
+        Not implemented. The author can delete their document. A landlord-side
+        member can delete any document in the apartment. A tenant cannot delete
+        another side's document.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/DocumentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204":
+          description: Not implemented.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/apartments/{apartmentId}/invites:
+    post:
+      tags: [membership]
+      operationId: createInvite
+      summary: Create an invite link
+      description: |
+        Not implemented. counterparty invites the other role for 7 days.
+        If that side is empty, the acceptor becomes its owner. A person who
+        is already on one side of this apartment is not accepted onto the other.
+
+        same_side invites another person into the caller's role. That is a
+        Premium feature. On the base plan the invite is refused and the client
+        is shown purchase. The invited person has the same actions and is not
+        owner.
+
+        membership asks billing before a second person joins a side.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind:
+                  type: string
+                  enum: [counterparty, same_side]
+      responses:
+        "201":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invite"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/invites/{code}/acceptance:
+    post:
+      tags: [membership]
+      operationId: acceptInvite
+      summary: Accept an invite
+      description: |
+        Not implemented. The caller is already signed in. A link older than
+        7 days does not change membership. Accepting the same link twice does
+        not create a second membership. Accepting a counterparty invite into
+        an empty tenant side turns a live-in owner into the landlord of that
+        apartment. An already recorded payment for the month stays closed.
+      parameters:
+        - $ref: "#/components/parameters/InviteCode"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptInviteResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/Gone"
+
+  /v1/apartments/{apartmentId}/ownership:
+    post:
+      tags: [membership]
+      operationId: transferOwnership
+      summary: Hand owner to another member of the same side
+      description: |
+        Not implemented. Exactly one owner per side. After the transfer the
+        previous owner loses transfer, removal of a co-member, and, on the
+        landlord side, closing the tenant side.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: Not implemented.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/members/{userId}:
+    delete:
+      tags: [membership]
+      operationId: removeMember
+      summary: Close one co-member on the caller's side
+      description: |
+        Not implemented. Owner only, and only a co-member of the same side.
+        The closed person cannot open the apartment on the next request.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204":
+          description: Not implemented.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/apartments/{apartmentId}/tenant-side/closure:
+    post:
+      tags: [membership]
+      operationId: closeTenantSide
+      summary: Close the whole tenant side
+      description: |
+        Not implemented. Only the landlord-side owner. One membership
+        transaction revokes tenant memberships and bumps the tenant generation.
+        passport, metering, payments, and history keep their rows. documents
+        filters later reads by that generation. calendar finds an empty
+        recipient list for the closed side when a due day arrives.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204":
+          description: Not implemented.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/landlord/apartments:
+    get:
+      tags: [landlord]
+      operationId: listLandlordApartments
+      summary: Landlord month board
+      description: |
+        Not implemented. FR-17. Apartments where the caller is landlord or
+        resident. Tenant-only apartments are absent. For each rental apartment
+        the current month reports whether every meter has a reading and whether
+        the payment is confirmed. The gateway assembles this from membership,
+        metering, and payments.
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Month"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [apartments]
+                properties:
+                  apartments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LandlordApartment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/apartments/{apartmentId}/history:
+    get:
+      tags: [history]
+      operationId: listHistory
+      summary: Read the maintenance history
+      description: |
+        Not implemented. Premium only. On the base plan the response is
+        premium_required and the entries are not returned. The feed appends
+        appliance replacements, completed maintenance, and confirmed payments.
+        Closing the tenant side does not delete entries. history does not
+        rewrite the source domains.
+      parameters:
+        - $ref: "#/components/parameters/ApartmentId"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [entries]
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HistoryEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/me/entitlement:
+    get:
+      tags: [billing]
+      operationId: getEntitlement
+      summary: Read the caller's plan
+      description: |
+        Not implemented. Base is one apartment and one person per side.
+        Premium is at most five apartments, same-side members, and history.
+        The monthly price is a single value inside 199–499 RUB. This draft
+        does not pick the number.
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entitlement"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/billing/purchases:
+    post:
+      tags: [billing]
+      operationId: submitPurchase
+      summary: Submit a store receipt for Premium
+      description: |
+        Not implemented. The client buys in App Store or Google Play and sends
+        the receipt here. A refused or cancelled store result leaves the plan
+        on base. The receipt is unique.
+
+        The payer is the landlord or the resident. A tenant can buy only in an
+        apartment that has no landlord. Where a landlord already exists, the
+        tenant is refused before the store check. The landlord's Premium opens
+        same-side access and history on that landlord's apartments for both sides.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [store, receipt]
+              properties:
+                store:
+                  type: string
+                  enum: [app_store, google_play]
+                receipt:
+                  type: string
+                  description: Store payload. Opaque to this draft.
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entitlement"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/me/notification-preferences:
+    get:
+      tags: [notification]
+      operationId: getNotificationPreferences
+      summary: Read push type switches
+      description: |
+        Not implemented. Types are readings, payments, maintenance, and
+        document deadlines. A new user has all four on. At most one push per
+        user, task, local due day, and type. Turning a type off leaves the
+        calendar task in place.
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [notification]
+      operationId: updateNotificationPreferences
+      summary: Change push type switches
+      description: Not implemented. Each type is independent. Omitted fields stay as they are.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferences"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/stories:
+    get:
+      tags: [content]
+      operationId: listStories
+      summary: List the four stories
+      description: |
+        Not implemented. Exactly four cards. utilities, electricity modes,
+        insurance, registration. There is no write API. Callers do not edit
+        the text. The card copy itself is not part of this draft.
+      responses:
+        "200":
+          description: Not implemented. The array length is four.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stories]
+                properties:
+                  stories:
+                    type: array
+                    minItems: 4
+                    maxItems: 4
+                    items:
+                      $ref: "#/components/schemas/Story"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/stories/{storyId}:
+    get:
+      tags: [content]
+      operationId: getStory
+      summary: Open one story
+      description: Not implemented. Returns the fixed text of that topic.
+      parameters:
+        - $ref: "#/components/parameters/StoryId"
+      responses:
+        "200":
+          description: Not implemented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Story"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token from identity. Draft lifetime is 15 minutes.
+        api-gateway validates it without calling identity on the request.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Retries of the same command with the same key and body are safe.
+        The draft servers do not read the header yet.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+    ApartmentId:
+      name: apartmentId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    ApplianceId:
+      name: applianceId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    MeterId:
+      name: meterId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/UUID"
+    Month:
+      name: month
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/Month"
+    InviteCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    StoryId:
+      name: storyId
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StoryId"
+
+  responses:
+    BadRequest:
+      description: The body breaks a stated limit, such as file type or size.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Missing or rejected access token, or a bad sign-in code.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: |
+        The caller is signed in and the domain rules refuse the command.
+        Examples include a missing role, premium_required, apartment_limit,
+        and tenant_cannot_purchase.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: No such object in a domain the caller is allowed to ask about.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: |
+        The command clashes with an existing fact, such as a duplicate store
+        receipt or a second side for someone who is already on one side.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Gone:
+      description: The invite is older than 7 days. Membership stays as it was.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+    Month:
+      type: string
+      description: Calendar month.
+      pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      example: "2026-10"
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                Machine-readable. Names used by the product rules include
+                premium_required, apartment_limit, tenant_cannot_purchase,
+                receipt_already_used, not_a_member, wrong_side, file_rejected,
+                invite_expired. This is not a closed list.
+              example: premium_required
+            message:
+              type: string
+    Session:
+      type: object
+      required: [access_token, refresh_token, expires_in]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          description: Access token lifetime in seconds. Draft value is 900.
+          example: 900
+    CreateApartmentRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [landlord, tenant, resident]
+          description: |
+            landlord is the арендодатель, tenant is the наниматель,
+            resident is the жилец-владелец.
+    Apartment:
+      type: object
+      required: [id, role, status]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        role:
+          type: string
+          enum: [landlord, tenant, resident]
+          description: The caller's role on this apartment.
+        status:
+          type: string
+          enum: [provisioning, active]
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Room"
+        appliances:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appliance"
+        members:
+          type: array
+          description: From membership. A sketch so the client can address an owner transfer.
+          items:
+            type: object
+            required: [user_id, role, owner]
+            properties:
+              user_id:
+                $ref: "#/components/schemas/UUID"
+              role:
+                type: string
+                enum: [landlord, tenant, resident]
+              owner:
+                type: boolean
+    Room:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+    ApplianceWrite:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        room_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null keeps the appliance on the apartment.
+    Appliance:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+        room_id:
+          type: string
+          format: uuid
+          nullable: true
+    CreateMeterRequest:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [electricity, cold_water, hot_water, gas, custom]
+        name:
+          type: string
+          description: Required when kind is custom. Example from the SRS is отопление.
+    Meter:
+      type: object
+      required: [id, kind]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        kind:
+          type: string
+          enum: [electricity, cold_water, hot_water, gas, custom]
+        name:
+          type: string
+    PutReadingRequest:
+      type: object
+      required: [value, read_on]
+      properties:
+        value:
+          type: number
+        read_on:
+          type: string
+          format: date
+        photo:
+          $ref: "#/components/schemas/PhotoIntent"
+    PhotoIntent:
+      type: object
+      required: [content_type, byte_size]
+      description: Optional photo. JPEG or PNG, up to 20 MB. PDF is rejected.
+      properties:
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png]
+        byte_size:
+          type: integer
+          minimum: 1
+          maximum: 20971520
+    Reading:
+      type: object
+      required: [meter_id, month, value, read_on, status]
+      properties:
+        meter_id:
+          $ref: "#/components/schemas/UUID"
+        month:
+          $ref: "#/components/schemas/Month"
+        value:
+          type: number
+        read_on:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [committed, awaiting_upload]
+        photo_object_id:
+          type: string
+          format: uuid
+          nullable: true
+    ReadingWriteResult:
+      type: object
+      required: [reading]
+      properties:
+        reading:
+          $ref: "#/components/schemas/Reading"
+        upload:
+          $ref: "#/components/schemas/PresignedUpload"
+    PresignedUpload:
+      type: object
+      required: [method, url]
+      description: |
+        The phone PUTs the bytes to object storage. The domain command stays
+        pending until media checks the bytes and emits object.committed.
+      properties:
+        method:
+          type: string
+          enum: [PUT]
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+    Task:
+      type: object
+      required: [id, kind, status]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        kind:
+          type: string
+          enum: [reading, payment, maintenance]
+        status:
+          type: string
+          enum: [open, closed]
+        month:
+          $ref: "#/components/schemas/Month"
+        due_on:
+          type: string
+          format: date
+        meter_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          description: Set for a maintenance task.
+    Payment:
+      type: object
+      required: [month, status]
+      properties:
+        month:
+          $ref: "#/components/schemas/Month"
+        status:
+          type: string
+          enum: [open, receipt_attached, confirmed]
+          description: |
+            receipt_attached still leaves a two-sided month open.
+            confirmed closes the month.
+        receipt_object_id:
+          type: string
+          format: uuid
+          nullable: true
+    FileIntent:
+      type: object
+      required: [content_type, byte_size]
+      description: JPEG, PNG, or PDF, up to 20 MB.
+      properties:
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png, application/pdf]
+        byte_size:
+          type: integer
+          minimum: 1
+          maximum: 20971520
+    FileWriteResult:
+      type: object
+      properties:
+        upload:
+          $ref: "#/components/schemas/PresignedUpload"
+        status:
+          type: string
+          enum: [awaiting_upload, committed]
+    CreateDocumentRequest:
+      type: object
+      required: [title, type, file]
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+          enum: [contract, receipt, warranty, manual]
+        visibility:
+          type: string
+          enum: [both_sides, own_side]
+          default: both_sides
+        expires_on:
+          type: string
+          format: date
+          nullable: true
+        file:
+          $ref: "#/components/schemas/FileIntent"
+    Document:
+      type: object
+      required: [id, title, type, visibility]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        title:
+          type: string
+        type:
+          type: string
+          enum: [contract, receipt, warranty, manual]
+        visibility:
+          type: string
+          enum: [both_sides, own_side]
+        expires_on:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          enum: [awaiting_upload, available]
+    DocumentWriteResult:
+      type: object
+      required: [document]
+      properties:
+        document:
+          $ref: "#/components/schemas/Document"
+        upload:
+          $ref: "#/components/schemas/PresignedUpload"
+    Invite:
+      type: object
+      required: [code, kind, expires_at]
+      properties:
+        code:
+          type: string
+        kind:
+          type: string
+          enum: [counterparty, same_side]
+        expires_at:
+          type: string
+          format: date-time
+          description: Seven days after creation for a counterparty link.
+    AcceptInviteResult:
+      type: object
+      required: [apartment_id, role]
+      properties:
+        apartment_id:
+          $ref: "#/components/schemas/UUID"
+        role:
+          type: string
+          enum: [landlord, tenant, resident]
+        owner:
+          type: boolean
+    LandlordApartment:
+      type: object
+      required: [apartment_id, role, month, readings_complete, payment_confirmed]
+      properties:
+        apartment_id:
+          $ref: "#/components/schemas/UUID"
+        role:
+          type: string
+          enum: [landlord, resident]
+        month:
+          $ref: "#/components/schemas/Month"
+        readings_complete:
+          type: boolean
+          description: True when every meter has a current reading for the month.
+        payment_confirmed:
+          type: boolean
+    HistoryEntry:
+      type: object
+      required: [id, kind, at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        kind:
+          type: string
+          enum: [appliance_replaced, maintenance_completed, payment_settled]
+        at:
+          type: string
+          format: date-time
+        text:
+          type: string
+          description: Text the feed already stored. Closing a tenant side leaves it in place.
+    Entitlement:
+      type: object
+      required: [plan, apartment_limit]
+      properties:
+        plan:
+          type: string
+          enum: [base, premium]
+        apartment_limit:
+          type: integer
+          enum: [1, 5]
+        monthly_price_rub:
+          type: integer
+          minimum: 199
+          maximum: 499
+          nullable: true
+          description: One price inside this range. The draft does not choose it.
+    NotificationPreferences:
+      type: object
+      description: Omitted fields on PATCH stay unchanged. A new user has all four enabled.
+      properties:
+        readings:
+          type: boolean
+        payments:
+          type: boolean
+        maintenance:
+          type: boolean
+        document_deadlines:
+          type: boolean
+    StoryId:
+      type: string
+      enum: [utilities, electricity_modes, insurance, registration]
+      description: |
+        utilities is «Что входит в ЖКХ».
+        electricity_modes is «Режимы счётчика электричества».
+        insurance is «Страховка».
+        registration is «Регистрация в квартире».
+    Story:
+      type: object
+      required: [id, title, body]
+      properties:
+        id:
+          $ref: "#/components/schemas/StoryId"
+        title:
+          type: string
+        body:
+          type: string
+          description: Fixed copy. The product text is not included in this draft.

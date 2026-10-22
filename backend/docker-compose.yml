@@ -1,0 +1,416 @@
+# Draft stack for Квартирник. Compose project name: kvartirnik.
+# api-gateway has no database. Every other service has its own Postgres.
+# NATS JetStream is three nodes. MinIO stands in for private S3.
+# Each process serves GET /ping only. See README.md and ../docs/c4.md.
+name: kvartirnik
+
+x-app: &app
+  restart: unless-stopped
+  networks: [kvartirnik]
+  stop_grace_period: 15s
+
+x-postgres: &postgres
+  image: postgres:16-alpine
+  restart: unless-stopped
+  networks: [kvartirnik]
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    interval: 5s
+    timeout: 5s
+    retries: 12
+    start_period: 5s
+
+x-nats: &nats
+  image: nats:2.15-alpine
+  restart: unless-stopped
+  networks: [kvartirnik]
+
+services:
+  # Edge and domain APIs. Host ports exist so `make ping` can reach each process.
+  api-gateway:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+
+
+  identity:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/identity/Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://identity:identity-draft@identity-db:5432/identity?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      identity-db:
+        condition: service_healthy
+
+  billing:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/billing/Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://billing:billing-draft@billing-db:5432/billing?sslmode=disable"
+
+    depends_on:
+      billing-db:
+        condition: service_healthy
+
+  membership:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/membership/Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://membership:membership-draft@membership-db:5432/membership?sslmode=disable"
+
+    depends_on:
+      membership-db:
+        condition: service_healthy
+
+  passport:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/passport/Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://passport:passport-draft@passport-db:5432/passport?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      passport-db:
+        condition: service_healthy
+
+  metering:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/metering/Dockerfile
+    ports:
+      - "8085:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://metering:metering-draft@metering-db:5432/metering?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      metering-db:
+        condition: service_healthy
+
+  payments:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/payments/Dockerfile
+    ports:
+      - "8086:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://payments:payments-draft@payments-db:5432/payments?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      payments-db:
+        condition: service_healthy
+
+  documents:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/documents/Dockerfile
+    ports:
+      - "8087:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://documents:documents-draft@documents-db:5432/documents?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      documents-db:
+        condition: service_healthy
+
+  calendar:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/calendar/Dockerfile
+    ports:
+      - "8088:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://calendar:calendar-draft@calendar-db:5432/calendar?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      calendar-db:
+        condition: service_healthy
+
+  history:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/history/Dockerfile
+    ports:
+      - "8089:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://history:history-draft@history-db:5432/history?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      history-db:
+        condition: service_healthy
+
+  media:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/media/Dockerfile
+    ports:
+      - "8090:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://media:media-draft@media-db:5432/media?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+      S3_ENDPOINT: "http://minio:9000"
+      S3_BUCKET: "media"
+      S3_REGION: "us-east-1"
+      S3_USE_PATH_STYLE: "true"
+      S3_ACCESS_KEY: "kvartirnik"
+      S3_SECRET_KEY: "kvartirnik-draft"
+
+    depends_on:
+      media-db:
+        condition: service_healthy
+
+  notification:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/notification/Dockerfile
+    ports:
+      - "8091:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://notification:notification-draft@notification-db:5432/notification?sslmode=disable"
+      NATS_URL: "nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222"
+
+    depends_on:
+      notification-db:
+        condition: service_healthy
+
+  content:
+    <<: *app
+    build:
+      context: .
+      dockerfile: cmd/content/Dockerfile
+    ports:
+      - "8092:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      DATABASE_URL: "postgres://content:content-draft@content-db:5432/content?sslmode=disable"
+
+    depends_on:
+      content-db:
+        condition: service_healthy
+
+  # One Postgres per domain. Credentials differ. No shared database.
+  identity-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: identity
+      POSTGRES_PASSWORD: identity-draft
+      POSTGRES_DB: identity
+    volumes:
+      - identity-db:/var/lib/postgresql/data
+
+  billing-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: billing
+      POSTGRES_PASSWORD: billing-draft
+      POSTGRES_DB: billing
+    volumes:
+      - billing-db:/var/lib/postgresql/data
+
+  membership-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: membership
+      POSTGRES_PASSWORD: membership-draft
+      POSTGRES_DB: membership
+    volumes:
+      - membership-db:/var/lib/postgresql/data
+
+  passport-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: passport
+      POSTGRES_PASSWORD: passport-draft
+      POSTGRES_DB: passport
+    volumes:
+      - passport-db:/var/lib/postgresql/data
+
+  metering-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: metering
+      POSTGRES_PASSWORD: metering-draft
+      POSTGRES_DB: metering
+    volumes:
+      - metering-db:/var/lib/postgresql/data
+
+  payments-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: payments-draft
+      POSTGRES_DB: payments
+    volumes:
+      - payments-db:/var/lib/postgresql/data
+
+  documents-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: documents
+      POSTGRES_PASSWORD: documents-draft
+      POSTGRES_DB: documents
+    volumes:
+      - documents-db:/var/lib/postgresql/data
+
+  calendar-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: calendar
+      POSTGRES_PASSWORD: calendar-draft
+      POSTGRES_DB: calendar
+    volumes:
+      - calendar-db:/var/lib/postgresql/data
+
+  history-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: history
+      POSTGRES_PASSWORD: history-draft
+      POSTGRES_DB: history
+    volumes:
+      - history-db:/var/lib/postgresql/data
+
+  media-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: media
+      POSTGRES_PASSWORD: media-draft
+      POSTGRES_DB: media
+    volumes:
+      - media-db:/var/lib/postgresql/data
+
+  notification-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification-draft
+      POSTGRES_DB: notification
+    volumes:
+      - notification-db:/var/lib/postgresql/data
+
+  content-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: content
+      POSTGRES_PASSWORD: content-draft
+      POSTGRES_DB: content
+    volumes:
+      - content-db:/var/lib/postgresql/data
+
+  # JetStream cluster. Routes use the cluster port. Server names come from the command.
+  nats-1:
+    <<: *nats
+    command:
+      - nats-server
+      - -c
+      - /etc/nats/kvartirnik.conf
+      - --server_name
+      - nats-1
+    volumes:
+      - nats-1:/data
+      - ./deploy/nats.conf:/etc/nats/kvartirnik.conf:ro
+
+  nats-2:
+    <<: *nats
+    command:
+      - nats-server
+      - -c
+      - /etc/nats/kvartirnik.conf
+      - --server_name
+      - nats-2
+    volumes:
+      - nats-2:/data
+      - ./deploy/nats.conf:/etc/nats/kvartirnik.conf:ro
+
+  nats-3:
+    <<: *nats
+    command:
+      - nats-server
+      - -c
+      - /etc/nats/kvartirnik.conf
+      - --server_name
+      - nats-3
+    volumes:
+      - nats-3:/data
+      - ./deploy/nats.conf:/etc/nats/kvartirnik.conf:ro
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    networks: [kvartirnik]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: kvartirnik
+      MINIO_ROOT_PASSWORD: kvartirnik-draft
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio:/data
+
+volumes:
+  identity-db:
+  billing-db:
+  membership-db:
+  passport-db:
+  metering-db:
+  payments-db:
+  documents-db:
+  calendar-db:
+  history-db:
+  media-db:
+  notification-db:
+  content-db:
+  nats-1:
+  nats-2:
+  nats-3:
+  minio:
+
+networks:
+  kvartirnik:
+    name: kvartirnik
